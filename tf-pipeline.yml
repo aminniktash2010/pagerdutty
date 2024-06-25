@@ -8,6 +8,11 @@ pr:
     include:
       - main
 
+variables:
+  terraform_version: '1.0.0'
+  key_vault_name: 'your-key-vault-name'
+  secret_name: 'pagerduty-api-token'
+
 stages:
   - stage: Plan
     displayName: "Terraform Plan"
@@ -24,13 +29,24 @@ stages:
               versionSpec: '3.x'
               addToPath: true
 
+          - task: AzureKeyVault@2
+            inputs:
+              azureSubscription: 'your-azure-subscription'
+              KeyVaultName: '$(key_vault_name)'
+              SecretsFilter: '$(secret_name)'
+              RunAsPreJob: true
+
           - script: |
               terraform init
             displayName: "Terraform Init"
+            env:
+              PAGERDUTY_API_TOKEN: $(pagerduty-api-token)
 
           - script: |
               terraform plan -out=tfplan
             displayName: "Terraform Plan"
+            env:
+              PAGERDUTY_API_TOKEN: $(pagerduty-api-token)
 
           - script: |
               terraform show -json tfplan > plan.json
@@ -46,7 +62,7 @@ stages:
   - stage: Apply
     displayName: "Terraform Apply"
     dependsOn: Plan
-    condition: and(succeeded(), eq(variables['Build.Reason'], 'PullRequest'), eq(variables['System.PullRequest.IsFork'], 'false'))
+    condition: and(succeeded(), eq(variables['Build.SourceBranchName'], 'main'))
     jobs:
       - job: terraformApply
         displayName: "Terraform Apply"
@@ -67,7 +83,11 @@ stages:
           - script: |
               terraform init
             displayName: "Terraform Init"
+            env:
+              PAGERDUTY_API_TOKEN: $(pagerduty-api-token)
 
           - script: |
               terraform apply -auto-approve plan.json
             displayName: "Terraform Apply"
+            env:
+              PAGERDUTY_API_TOKEN: $(pagerduty-api-token)
