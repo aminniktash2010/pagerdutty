@@ -1,0 +1,73 @@
+trigger:
+  branches:
+    exclude:
+      - '*'
+
+pr:
+  branches:
+    include:
+      - main
+
+stages:
+  - stage: Plan
+    displayName: "Terraform Plan"
+    jobs:
+      - job: terraformPlan
+        displayName: "Terraform Plan"
+        pool:
+          vmImage: 'ubuntu-latest'
+        steps:
+          - checkout: self
+
+          - task: UsePythonVersion@0
+            inputs:
+              versionSpec: '3.x'
+              addToPath: true
+
+          - script: |
+              terraform init
+            displayName: "Terraform Init"
+
+          - script: |
+              terraform plan -out=tfplan
+            displayName: "Terraform Plan"
+
+          - script: |
+              terraform show -json tfplan > plan.json
+            displayName: "Save Plan to JSON"
+
+          - task: PublishPipelineArtifact@1
+            inputs:
+              targetPath: '$(System.DefaultWorkingDirectory)/plan.json'
+              artifactName: 'tfplan'
+              publishLocation: 'pipeline'
+            displayName: "Publish Terraform Plan Artifact"
+
+  - stage: Apply
+    displayName: "Terraform Apply"
+    dependsOn: Plan
+    condition: and(succeeded(), eq(variables['Build.Reason'], 'PullRequest'), eq(variables['System.PullRequest.IsFork'], 'false'))
+    jobs:
+      - job: terraformApply
+        displayName: "Terraform Apply"
+        pool:
+          vmImage: 'ubuntu-latest'
+        steps:
+          - checkout: self
+
+          - task: UsePythonVersion@0
+            inputs:
+              versionSpec: '3.x'
+              addToPath: true
+
+          - download: current
+            artifact: tfplan
+            displayName: "Download Terraform Plan Artifact"
+
+          - script: |
+              terraform init
+            displayName: "Terraform Init"
+
+          - script: |
+              terraform apply -auto-approve plan.json
+            displayName: "Terraform Apply"
