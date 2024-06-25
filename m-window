@@ -1,0 +1,152 @@
+trigger:
+- none
+
+pr:
+- main
+
+variables:
+  # Define default values for the script parameters
+  requesterEmail: ''
+  serviceName: ''
+  maintenanceDescription: 'Scheduled maintenance'
+  weekday: 0  # Default to Monday
+  startTime: '14:00'  # Default start time
+  durationHours: 2  # Default duration in hours
+  maintenanceType: 'one-time'  # Default to one-time maintenance
+
+parameters:
+  - name: requesterEmail
+    displayName: Requester Email
+    type: string
+  - name: serviceName
+    displayName: Service Name
+    type: string
+  - name: maintenanceDescription
+    displayName: Maintenance Description
+    type: string
+    default: 'Scheduled maintenance'
+  - name: weekday
+    displayName: Weekday for Maintenance (only for recurring)
+    type: int
+    default: 0  # Monday
+  - name: startTime
+    displayName: Maintenance Start Time (HH:MM)
+    type: string
+    default: '14:00'
+  - name: durationHours
+    displayName: Maintenance Duration (hours)
+    type: int
+    default: 2
+  - name: maintenanceType
+    displayName: Maintenance Type
+    type: string
+    default: 'one-time'
+    values:
+      - one-time
+      - recurring
+
+stages:
+- stage: Maintenance
+  jobs:
+  - job: RunScript
+    displayName: Run Maintenance Script
+    pool:
+      vmImage: 'ubuntu-latest'
+    steps:
+    - task: UsePythonVersion@0
+      inputs:
+        versionSpec: '3.x'
+    - task: AzureKeyVault@2
+      inputs:
+        azureSubscription: '<Your-Azure-Subscription>'
+        keyVaultName: '<Your-KeyVault-Name>'
+        secretsFilter: 'PagerDutyApiKey'
+        runAsPreJob: true
+    - script: |
+        python3 -m pip install requests
+      displayName: 'Install Dependencies'
+    - script: |
+        import os
+        import requests
+        import json
+        from datetime import datetime, timedelta
+
+        def get_service_id(api_key, service_name):
+            base_url = "https://api.pagerduty.com/services"
+            headers = {
+                "Authorization": f"Token token={api_key}",
+                "Content-Type": "application/json",
+            }
+
+            try:
+                response = requests.get(base_url, headers=headers)
+                response_data = response.json()
+                for service in response_data.get("services", []):
+                    if service.get("name") == service_name:
+                        return service.get("id")
+                return None
+            except Exception as e:
+                print(f"Error fetching service data: {e}")
+                return None
+
+        def get_next_weekday(weekday):
+            today = datetime.now()
+            days_ahead = weekday - today.weekday()
+            if days_ahead <= 0:
+                days_ahead += 7
+            return today + timedelta(days=days_ahead)
+
+        def create_maintenance(api_key, requester, service_name, description, start_time, duration_hours, recurring, weekday=None):
+            service_id = get_service_id(api_key, service_name)
+            if not service_id:
+                print(f"Service '{service_name}' not found.")
+                return
+
+            if recurring:
+                maintenance_start = get_next_weekday(weekday)
+            else:
+                maintenance_start = datetime.now()
+
+            maintenance_start = maintenance_start.replace(hour=start_time.hour, minute=start_time.minute, second=0, microsecond=0)
+            end_time = maintenance_start + timedelta(hours=duration_hours)
+
+            maintenance_payload = {
+                "maintenance_window": {
+                    "type": "maintenance_window",
+                    "start_time": maintenance_start.isoformat(),
+                    "end_time": end_time.isoformat(),
+                    "description": description,
+                    "service_ids": [service_id]
+                }
+            }
+
+            base_url = "https://api.pagerduty.com/maintenance_windows"
+            headers = {
+                "Authorization": f"Token token={api_key}",
+                "Content-Type": "application/json",
+                "From": requester
+            }
+
+            try:
+                response = requests.post(base_url, headers=headers, data=json.dumps(maintenance_payload))
+                if response.status_code == 201:
+                    print("Maintenance window created successfully.")
+                else:
+                    print(f"Error creating maintenance window: {response.status_code} - {response.text}")
+            except Exception as e:
+                print(f"Error creating maintenance window: {e}")
+
+        # Example usage
+        api_key = os.getenv("PagerDutyApiKey")
+        requester_email = "${{ parameters.requesterEmail }}"
+        service_name = "${{ parameters.serviceName }}"
+        maintenance_description = "${{ parameters.maintenanceDescription }}"
+        weekday = ${{ parameters.weekday }}
+        start_time = datetime.strptime("${{ parameters.startTime }}", "%H:%M")
+        duration_hours = ${{ parameters.durationHours }}
+        maintenance_type = "${{ parameters.maintenanceType }}"
+
+        recurring = maintenance_type == 'recurring'
+
+        create_maintenance(api_key, requester_email, service_name, maintenance_description, start_time, duration_hours, recurring, weekday if recurring else None)
+      displayName: 'Run Maintenance Script'
