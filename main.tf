@@ -8,7 +8,7 @@ terraform {
 }
 
 provider "pagerduty" {
-  token = "u+-gy4yC2-MiWVUgmNTQ"
+  token = "your pager duty API Key"
 }
 
 locals {
