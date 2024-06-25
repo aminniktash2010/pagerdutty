@@ -1,3 +1,11 @@
+
+variable "pagerduty_api_token" {
+  description = "PagerDuty API Token"
+  type        = string
+  sensitive   = true
+}
+
+
 variable "services" {
   description = "List of services to be created"
   type = map(object({
