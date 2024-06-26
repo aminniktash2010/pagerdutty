@@ -66,6 +66,7 @@ stages:
         python3 -m pip install requests
       displayName: 'Install Dependencies'
     - script: |
+        echo "PagerDuty API Key: $PagerDutyApiKey"
         cat <<EOF > maintenance_script.py
         import os
         import requests
