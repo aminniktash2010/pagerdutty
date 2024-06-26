@@ -1,0 +1,10 @@
+{
+  "pagerDutyApiKey": "your_pagerduty_api_key_here",
+  "requesterEmail": "requester@example.com",
+  "serviceName": "YourServiceName",
+  "maintenanceDescription": "Scheduled maintenance",
+  "weekday": 0,
+  "startTime": "14:00",
+  "durationHours": 2,
+  "maintenanceType": "one-time"
+}
