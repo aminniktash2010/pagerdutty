@@ -66,6 +66,7 @@ stages:
         python3 -m pip install requests
       displayName: 'Install Dependencies'
     - script: |
+        cat <<EOF > maintenance_script.py
         import os
         import requests
         import json
@@ -149,4 +150,8 @@ stages:
         recurring = maintenance_type == 'recurring'
 
         create_maintenance(api_key, requester_email, service_name, maintenance_description, start_time, duration_hours, recurring, weekday if recurring else None)
+        EOF
+      displayName: 'Create Maintenance Script File'
+    - script: |
+        python3 maintenance_script.py
       displayName: 'Run Maintenance Script'
