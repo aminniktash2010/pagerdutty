@@ -1,5 +1,5 @@
 trigger:
-- none
+- main
 
 pr:
 - main
@@ -9,9 +9,9 @@ variables:
   requesterEmail: ''
   serviceName: ''
   maintenanceDescription: 'Scheduled maintenance'
-  weekday: 0  # Default to Monday
+  weekday: '0'  # Default to Monday
   startTime: '14:00'  # Default start time
-  durationHours: 2  # Default duration in hours
+  durationHours: '2'  # Default duration in hours
   maintenanceType: 'one-time'  # Default to one-time maintenance
 
 parameters:
@@ -27,16 +27,16 @@ parameters:
     default: 'Scheduled maintenance'
   - name: weekday
     displayName: Weekday for Maintenance (only for recurring)
-    type: int
-    default: 0  # Monday
+    type: string
+    default: '0'  # Monday
   - name: startTime
     displayName: Maintenance Start Time (HH:MM)
     type: string
     default: '14:00'
   - name: durationHours
     displayName: Maintenance Duration (hours)
-    type: int
-    default: 2
+    type: string
+    default: '2'
   - name: maintenanceType
     displayName: Maintenance Type
     type: string
@@ -141,9 +141,9 @@ stages:
         requester_email = "${{ parameters.requesterEmail }}"
         service_name = "${{ parameters.serviceName }}"
         maintenance_description = "${{ parameters.maintenanceDescription }}"
-        weekday = ${{ parameters.weekday }}
+        weekday = int("${{ parameters.weekday }}")
         start_time = datetime.strptime("${{ parameters.startTime }}", "%H:%M")
-        duration_hours = ${{ parameters.durationHours }}
+        duration_hours = int("${{ parameters.durationHours }}")
         maintenance_type = "${{ parameters.maintenanceType }}"
 
         recurring = maintenance_type == 'recurring'
