@@ -73,6 +73,13 @@ stages:
         from datetime import datetime, timedelta
 
         def get_service_id(api_key, service_name):
+            services = fetch_services(api_key)
+            for service in services:
+                if service.get("name") == service_name:
+                    return service.get("id")
+            return None
+
+        def fetch_services(api_key):
             base_url = "https://api.pagerduty.com/services"
             headers = {
                 "Authorization": f"Token token={api_key}",
@@ -81,14 +88,21 @@ stages:
 
             try:
                 response = requests.get(base_url, headers=headers)
+                response.raise_for_status()
                 response_data = response.json()
-                for service in response_data.get("services", []):
-                    if service.get("name") == service_name:
-                        return service.get("id")
-                return None
+                return response_data.get("services", [])
             except Exception as e:
                 print(f"Error fetching service data: {e}")
-                return None
+                return []
+
+        def list_services(api_key):
+            services = fetch_services(api_key)
+            if not services:
+                print("No services found.")
+            else:
+                print("Available services:")
+                for service in services:
+                    print(f"Name: {service.get('name')}, ID: {service.get('id')}")
 
         def get_next_weekday(weekday):
             today = datetime.now()
@@ -101,6 +115,7 @@ stages:
             service_id = get_service_id(api_key, service_name)
             if not service_id:
                 print(f"Service '{service_name}' not found.")
+                list_services(api_key)
                 return
 
             if recurring:
@@ -130,14 +145,11 @@ stages:
 
             try:
                 response = requests.post(base_url, headers=headers, data=json.dumps(maintenance_payload))
-                if response.status_code == 201:
-                    print("Maintenance window created successfully.")
-                else:
-                    print(f"Error creating maintenance window: {response.status_code} - {response.text}")
+                response.raise_for_status()
+                print("Maintenance window created successfully.")
             except Exception as e:
                 print(f"Error creating maintenance window: {e}")
 
-        # Example usage
         api_key = os.getenv("PagerDutyApiKey")
         requester_email = "${{ parameters.requesterEmail }}"
         service_name = "${{ parameters.serviceName }}"
