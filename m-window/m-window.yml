@@ -1,0 +1,76 @@
+trigger:
+- main
+
+pr:
+- main
+
+variables:
+  # You can set this variable in the Azure DevOps pipeline UI
+  PAGERDUTY_API_KEY: $(PAGERDUTY_API_KEY)
+
+parameters:
+  - name: requesterEmail
+    displayName: Requester Email
+    type: string
+  - name: serviceIds
+    displayName: Service IDs
+    type: string
+    default: '' # comma-separated list of service IDs
+  - name: firstMaintWindowDate
+    displayName: First Maintenance Window Date
+    type: string
+  - name: description
+    displayName: Description
+    type: string
+  - name: durationMinutes
+    displayName: Duration in Minutes
+    type: int
+  - name: periodHours
+    displayName: Period in Hours
+    type: int
+  - name: numRepetitions
+    displayName: Number of Repetitions
+    type: int
+    default: 1
+  - name: dryRun
+    displayName: Dry Run
+    type: boolean
+    default: false
+
+stages:
+- stage: Maintenance
+  jobs:
+  - job: RunScript
+    displayName: Run Maintenance Script
+    pool:
+      vmImage: 'ubuntu-latest'
+    steps:
+    - task: UsePythonVersion@0
+      inputs:
+        versionSpec: '3.x'
+    - script: |
+        python3 -m pip install pdpyras python-dateutil
+      displayName: 'Install Dependencies'
+    - script: |
+        echo "Requester Email: ${{ parameters.requesterEmail }}"
+        echo "Service IDs: ${{ parameters.serviceIds }}"
+        echo "First Maintenance Window Date: ${{ parameters.firstMaintWindowDate }}"
+        echo "Description: ${{ parameters.description }}"
+        echo "Duration Minutes: ${{ parameters.durationMinutes }}"
+        echo "Period Hours: ${{ parameters.periodHours }}"
+        echo "Number of Repetitions: ${{ parameters.numRepetitions }}"
+        echo "Dry Run: ${{ parameters.dryRun }}"
+        
+        # Prepare service IDs for script input
+        SERVICE_IDS=$(echo ${{ parameters.serviceIds }} | tr ',' '\n' | awk '{print "-s "$0}' | tr '\n' ' ')
+        
+        python3 create_maintenance.py \
+          -r ${{ parameters.requesterEmail }} \
+          $SERVICE_IDS \
+          -t ${{ parameters.firstMaintWindowDate }} \
+          -d ${{ parameters.description }} \
+          -l ${{ parameters.durationMinutes }} \
+          -p ${{ parameters.periodHours }} \
+          -m ${{ parameters.numRepetitions }} \
+          $(if [ ${{ parameters.dryRun }} = true ]; then echo "-n"; fi)
+      displayName: 'Run Maintenance Script'
