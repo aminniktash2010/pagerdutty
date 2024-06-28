@@ -8,7 +8,7 @@ terraform {
 }
 
 provider "pagerduty" {
-  token = var.pagerduty_api_token
+  token =  #var.pagerduty_api_token
 }
 
 locals {
@@ -16,28 +16,42 @@ locals {
     for key, service in var.services :
     "${service.customer_name}-${service.product_name}-${service.service_id}" => service
   }
-}
 
-# Loop through services defined in the variable file
-resource "pagerduty_service" "services" {
-  for_each = local.unique_services
-
-  name = "${each.value.customer_name}-${each.value.product_name}-${each.value.service_id}"
-
-  auto_resolve_timeout    = 14400
-  acknowledgement_timeout = 600
-  escalation_policy       = data.pagerduty_escalation_policy.es.id
-}
-
-data "pagerduty_escalation_policy" "es" {
-  name = "TechOps"
+  unique_business_services = {
+    for key, bs in var.business_services :
+    bs.name => bs
+  }
 }
 
 data "pagerduty_event_orchestrations" "ev-orch" {
   name_filter = "TechOps-event_orchestration"
 }
+data "pagerduty_escalation_policy" "es" {
+  name = "TechOps"
+}
 
-# Create an event orchestration router
+
+
+resource "pagerduty_business_service" "bs" {
+  for_each = local.unique_business_services
+
+  name = each.value.name
+}
+
+
+
+resource "pagerduty_service" "services" {
+  for_each = local.unique_services
+
+  name                    = "${each.value.customer_name}-${each.value.product_name}-${each.value.service_id}"
+  auto_resolve_timeout    = 14400
+  acknowledgement_timeout = 600
+  escalation_policy       = data.pagerduty_escalation_policy.es.id
+  #business_service        = pagerduty_business_service.bs[each.value.business_service_name].id
+}
+
+
+
 resource "pagerduty_event_orchestration_router" "router" {
   event_orchestration = data.pagerduty_event_orchestrations.ev-orch.event_orchestrations[0].id
 
@@ -79,5 +93,17 @@ resource "pagerduty_event_orchestration_router" "router" {
   }
 }
 
+resource "pagerduty_service_dependency" "dependencies" {
+  for_each = local.unique_services
 
-
+  dependency {
+    dependent_service {
+      id   = pagerduty_business_service.bs[each.value.business_service_name].id
+      type = "business_service"
+    }
+    supporting_service {
+      id   = pagerduty_service.services[each.key].id
+      type = "service"
+    }
+  }
+}
