@@ -1,9 +1,10 @@
-
-variable "pagerduty_api_token" {
-  description = "PagerDuty API Token"
-  type        = string
-  sensitive   = true
+variable "business_services" {
+  description = "List of business services to be created in PagerDuty"
+  type = list(object({
+    name = string
+  }))
 }
+
 
 
 variable "services" {
@@ -14,5 +15,6 @@ variable "services" {
     service_id                  = string
     match_summary               = string
     match_source                = string
+    business_service_name       = string
   }))
 }
