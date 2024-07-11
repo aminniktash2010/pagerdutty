@@ -40,6 +40,8 @@ services = [
 
 
 #####################################################
+team  = "TechOps"
+#####################################################
 escalation_policy = {
   name     = "Primary Escalation Policy"
   schedule = "Primary On-Call Schedule"
