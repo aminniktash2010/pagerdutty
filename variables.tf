@@ -5,6 +5,10 @@ variable "business_services" {
   }))
 }
 
+variable "team" {
+  description = "Please defin what team is assign to the escalation_policy"
+  type = string
+}
 
 variable "escalation_policy" {
   description = "Escalation policy details"
