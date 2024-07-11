@@ -24,6 +24,10 @@ locals {
   }
 }
 
+data "pagerduty_team" "team" {
+  name = var.team
+}
+
 data "pagerduty_user" "usa_users" {
   for_each = toset(var.schedule.usa_users)
   email    = each.value
@@ -78,7 +82,7 @@ resource "pagerduty_schedule" "schedule" {
 
 resource "pagerduty_escalation_policy" "policy" {
   name = var.escalation_policy.name
-
+  teams = [data.pagerduty_team.team.id]
   rule {
     escalation_delay_in_minutes = 30
 
@@ -123,7 +127,8 @@ resource "pagerduty_service" "services" {
 }
 
 resource "pagerduty_event_orchestration" "orchestration" {
-  name = var.event_orchestration.name
+  name    = var.event_orchestration.name
+  team    = data.pagerduty_team.team.id
 }
 
 resource "pagerduty_event_orchestration_router" "router" {
