@@ -1,53 +1,65 @@
 business_services = [
   {
-    name = "novascocia-Business-Service"
+    name = "TBS1"
   },
   {
-    name = "ontario-Business-Service"
+    name = "TBS2"
   }
 ]
 
-services = {
-  t333nn3 = {
-    customer_name               = "Customer2"
-    product_name                = "ProductA"
-    service_id                  = "ID001"
-    match_summary               = "database"
-    match_source                = "db[0-9]+-server"
-    business_service_name       = "novascocia-Business-Service"
+services = [
+  {
+    customer_name         = "CustomerA"
+    product_name          = "ProductA"
+    service_id            = "ServiceA"
+    match_summary         = ".*ServiceA.*"
+    match_source          = "sourceA.*"
+    business_service_name = "TBS1"
+    additional_conditions = [
+      { expression = "event.summary matches part  'high'" },
+      { expression = "event.summary matches part  'critical'" }
+    ]
+    action = {
+      name               = "CustomerA Script Action"
+      description        = "Script Action for CustomerA Service"
+      action_type        = "script"
+      script             = "print(\"Hello from CustomerA Service!\")"
+      invocation_command = "/usr/local/bin/python3"
+    }
+  },
+  {
+    customer_name         = "CustomerB"
+    product_name          = "ProductB"
+    service_id            = "ServiceB"
+    match_summary         = ".*ServiceB.*"
+    match_source          = "sourceB.*"
+    business_service_name = "TBS2"
+    additional_conditions = []
   }
+]
 
-  service2 = {
-    customer_name               = "CustomerB"
-    product_name                = "ProductB"
-    service_id                  = "ID002"
-    match_summary               = "database"
-    match_source                = "db[0-9]+-server"
-    business_service_name       = "novascocia-Business-Service"
-  }
-    service3 = {
-    customer_name               = "CustomerB"
-    product_name                = "ProductC"
-    service_id                  = "ID003"
-    match_summary               = "database"
-    match_source                = "db[0-9]+-server"
-    business_service_name       = "ontario-Business-Service"
-  }
-    ID003 = {
-    customer_name               = "Customerc"
-    product_name                = "Producta"
-    service_id                  = "ID003"
-    match_summary               = "database"
-    match_source                = "db[0-9]+-server"
-    business_service_name       = "ontario-Business-Service"
-  }
 
-    t585653 = {
-    customer_name               = "novascocia"
-    product_name                = "stm"
-    service_id                  = "tkgee3333"
-    match_summary               = "tkgee333"
-    match_source                = "db[0-11]+-server"
-    business_service_name       = "novascocia-Business-Service"
-  }
+#####################################################
+escalation_policy = {
+  name     = "Primary Escalation Policy"
+  schedule = "Primary On-Call Schedule"
+}
+
+first_escalation_user     = "oncall-email@pg-dev.com"
+second_escalation_user    = "oncall-email@pg-dev.com"
+
+##################################################################
+schedule = {
+  name        = "Primary On-Call Schedule"
+  time_zone   = "America/New_York"
+  description = "Primary on-call schedule for the team"
+  usa_users       = ["oncall-email@pg-dev.com", "amin.niktash@varian.com"]
+  india_users       = ["oncall-email@pg-dev.com", "amin.niktash@varian.com"]
+}
+
+
+#######################################################
+
+event_orchestration = {
+  name = "Primary Event Orchestration"
 }
