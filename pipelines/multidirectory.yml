@@ -1,0 +1,51 @@
+trigger: none
+
+resources:
+  repositories:
+    - repository: tfvarsRepo
+      type: git
+      name: <ProjectName>/<TfvarsRepoName> # Update with your actual project and repository name
+
+variables:
+  - name: TFVARS_DIR
+    value: ''
+
+stages:
+  - stage: Terraform
+    jobs:
+      - job: ApplyTerraform
+        pool:
+          vmImage: 'ubuntu-latest'
+
+        steps:
+          - checkout: self
+          - checkout: tfvarsRepo
+
+          - script: |
+              # Get the latest commit in the tfvars repository
+              latest_commit=$(git -C $(Build.SourcesDirectory)/tfvarsRepo log -1 --pretty=format:%H)
+              
+              # Get the list of modified files in the latest commit
+              modified_files=$(git -C $(Build.SourcesDirectory)/tfvarsRepo diff-tree --no-commit-id --name-only -r $latest_commit)
+
+              # Extract the directory that was modified
+              tfvars_dir=$(echo $modified_files | cut -d '/' -f 1)
+
+              # Export the directory as a pipeline variable
+              echo "##vso[task.setvariable variable=TFVARS_DIR]$tfvars_dir"
+            displayName: 'Determine Updated tfvars Directory'
+
+          - script: |
+              echo "The updated tfvars directory is: $(TFVARS_DIR)"
+            displayName: 'Display the Updated Directory'
+
+          - script: |
+              # Combine all tfvars files in the directory into a single file
+              cat $(Build.SourcesDirectory)/tfvarsRepo/$(TFVARS_DIR)/*.tfvars > $(Build.SourcesDirectory)/tfvarsRepo/$(TFVARS_DIR)/combined.tfvars
+            displayName: 'Combine tfvars Files'
+
+          - script: |
+              cd $(Build.SourcesDirectory)/tfvarsRepo/$(TFVARS_DIR)
+              terraform init
+              terraform apply -var-file=combined.tfvars -auto-approve
+            displayName: 'Run Terraform'
