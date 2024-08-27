@@ -1,7 +1,29 @@
 variable "business_services" {
   description = "List of business services to be created in PagerDuty"
   type = list(object({
-    name = string
+    name        = string
+    used_by     = optional(list(string))
+    using_on    = optional(list(string))
+  }))
+}
+
+variable "services" {
+  description = "List of services to be created in PagerDuty"
+  type = list(object({
+    customer_name         = string
+    product_name          = string
+    service_id            = string
+    match_summary         = string
+    match_source          = string
+    additional_conditions = optional(list(object({
+      expression = string
+    })), [])
+    extension = optional(object({
+      name         = string
+      endpoint_url = string
+    }), null)
+    used_by    = optional(list(string))
+    using_on = optional(list(string))
   }))
 }
 
@@ -46,21 +68,4 @@ variable "event_orchestration" {
   })
 }
 
-variable "services" {
-  description = "List of services to be created in PagerDuty"
-  type = list(object({
-    customer_name         = string
-    product_name          = string
-    service_id            = string
-    match_summary         = string
-    match_source          = string
-    business_service_name = string
-    additional_conditions = optional(list(object({
-      expression = string
-    })), [])
-    extension = optional(object({
-      name         = string
-      endpoint_url = string
-    }), null)
-  }))
-}
+
