@@ -1,9 +1,18 @@
 business_services = [
   {
     name = "TBS1"
+    used_by    = ["TBS2", "TBS3"]
+    using_on = []
   },
   {
     name = "TBS2"
+    used_by    = []
+    using_on = []
+  },
+  {
+    name = "TBS3"
+    used_by    = []
+    using_on = []
   }
 ]
 
@@ -12,9 +21,10 @@ services = [
     customer_name         = "CustomerA"
     product_name          = "ProductA"
     service_id            = "ServiceA"
+    used_by               = ["TBS2", "TBS3"]
+    using_on              = ["TBS1"]
     match_summary         = ".*ServiceA.*"
-    match_source          = "sourceA.*"
-    business_service_name = "TBS1"
+    match_source          = "sourceA.*"   
     additional_conditions = [
       { expression = "event.summary matches part  'high'" },
       { expression = "event.summary matches part  'critical'" }
@@ -25,6 +35,7 @@ services = [
       action_type        = "script"
       script             = "print(\"Hello from CustomerA Service!\")"
       invocation_command = "/usr/local/bin/python3"
+
     }
   },
   {
@@ -33,8 +44,19 @@ services = [
     service_id            = "ServiceB"
     match_summary         = ".*ServiceB.*"
     match_source          = "sourceB.*"
-    business_service_name = "TBS2"
     additional_conditions = []
+    used_by               = ["TBS2"]
+    using_on            = ["TBS1"]
+  },
+  {
+    customer_name         = "Customerc"
+    product_name          = "Productc"
+    service_id            = "Servicec"
+    match_summary         = ".*ServiceB.*"
+    match_source          = "sourceB.*"
+    additional_conditions = []
+    used_by               = ["TBS2"]
+    using_on            = ["TBS1"]
   }
 ]
 
