@@ -8,9 +8,8 @@ terraform {
 }
 
 provider "pagerduty" {
-  token =  #var.pagerduty_api_token
+  token =  "u+-gy4yC2-MiWVUgmNTQ"
 }
-
 
 locals {
   unique_services = {
@@ -41,6 +40,7 @@ data "pagerduty_user" "india_users" {
 data "pagerduty_user" "first_escalation_user" {
   email = var.first_escalation_user
 }
+
 data "pagerduty_user" "second_escalation_user" {
   email = var.second_escalation_user
 }
@@ -48,7 +48,6 @@ data "pagerduty_user" "second_escalation_user" {
 data "pagerduty_priority" "p1" {
   name = "P1"
 }
-
 
 resource "pagerduty_schedule" "schedule" {
   name        = var.schedule.name
@@ -110,21 +109,9 @@ resource "pagerduty_escalation_policy" "policy" {
 }
 
 
-resource "pagerduty_business_service" "bs" {
-  for_each = local.unique_business_services
 
-  name = each.value.name
-}
 
-resource "pagerduty_service" "services" {
-  for_each = local.unique_services
 
-  name                    = "${each.value.customer_name}-${each.value.product_name}-${each.value.service_id}"
-  auto_resolve_timeout    = 14400
-  acknowledgement_timeout = 600
-  escalation_policy       = pagerduty_escalation_policy.policy.id
-  #business_service        = pagerduty_business_service.bs[each.value.business_service_name].id
-}
 
 resource "pagerduty_event_orchestration" "orchestration" {
   name    = var.event_orchestration.name
@@ -172,20 +159,35 @@ resource "pagerduty_event_orchestration_router" "router" {
   }
 }
 
-resource "pagerduty_service_dependency" "dependencies" {
+resource "pagerduty_service" "services" {
   for_each = local.unique_services
 
-  dependency {
-    dependent_service {
-      id   = pagerduty_business_service.bs[each.value.business_service_name].id
-      type = "business_service"
-    }
-    supporting_service {
-      id   = pagerduty_service.services[each.key].id
-      type = "service"
-    }
-  }
+  name                    = "svb-${each.value.customer_name}-${each.value.product_name}-${each.value.service_id}"
+  auto_resolve_timeout    = 14400
+  acknowledgement_timeout = 600
+  escalation_policy       = pagerduty_escalation_policy.policy.id
 }
+
+resource "pagerduty_business_service" "bs" {
+  for_each = {
+    for bs in var.business_services : bs.name => bs
+  }
+
+  name = each.value.name
+}
+
+# Define secondary business services with the exact same name as the service
+resource "pagerduty_business_service" "secondary_bs" {
+  for_each = local.unique_services
+
+  name = "${each.value.customer_name}-${each.value.product_name}-${each.value.service_id}"
+}
+
+
+
+
+
+
 
 
 
