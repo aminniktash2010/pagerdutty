@@ -13,17 +13,9 @@ variable "services" {
     customer_name         = string
     product_name          = string
     service_id            = string
-    match_summary         = string
-    match_source          = string
-    additional_conditions = optional(list(object({
+    conditions    = list(object({
       expression = string
-    })), [])
-    extension = optional(object({
-      name         = string
-      endpoint_url = string
-    }), null)
-    used_by    = optional(list(string))
-    using_on = optional(list(string))
+    }))
   }))
 }
 
