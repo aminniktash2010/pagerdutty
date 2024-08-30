@@ -1,0 +1,54 @@
+parameters:
+- name: dryRun
+  type: boolean
+  default: true
+
+jobs:
+- job: BackupPagerDuty
+  displayName: 'Backup PagerDuty Configuration'
+  condition: eq(${{ parameters.dryRun }}, false)
+  pool:
+    vmImage: 'ubuntu-latest'
+  steps:
+  - task: UsePythonVersion@0
+    inputs:
+      versionSpec: '3.x'
+      addToPath: true
+
+  - script: |
+      pip install requests
+    displayName: 'Install required Python packages'
+
+  - script: |
+      python pagerduty/backup-api/backup.py
+    displayName: 'Run PagerDuty Backup Script'
+
+  - task: AzureCLI@2
+    inputs:
+      azureSubscription: 'your-azure-service-connection'
+      scriptType: 'bash'
+      scriptLocation: 'inlineScript'
+      inlineScript: |
+        az storage blob upload-batch --account-name your_storage_account_name --auth-mode key -d pagerduty-backups -s $(System.DefaultWorkingDirectory) --pattern "pagerduty_backup_*.json"
+    displayName: 'Upload Backup to Azure Blob Storage'
+
+  - publish: $(System.DefaultWorkingDirectory)/pagerduty_backup_*.json
+    artifact: PagerDutyBackup
+
+- job: TerraformApply
+  dependsOn: BackupPagerDuty
+  condition: eq(${{ parameters.dryRun }}, false)
+  displayName: 'Apply Terraform Changes'
+  pool:
+    vmImage: 'ubuntu-latest'
+  steps:
+  - task: TerraformInstaller@0
+    inputs:
+      terraformVersion: 'latest'
+
+  - task: TerraformTaskV3@3
+    inputs:
+      provider: 'azurerm'
+      command: 'apply'
+      workingDirectory: '$(System.DefaultWorkingDirectory)/terraform'
+      environmentServiceNameAzureRM: 'your-azure-service-connection'
