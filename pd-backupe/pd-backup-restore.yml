@@ -1,0 +1,69 @@
+parameters:
+- name: operation
+  type: string
+  default: 'backup'
+  values:
+  - backup
+  - restore
+
+- name: backupFile
+  type: string
+  default: ''
+
+variables:
+- group: pagerduty-variables
+
+jobs:
+- job: PagerDutyOperation
+  displayName: 'PagerDuty Backup/Restore'
+  pool:
+    vmImage: 'ubuntu-latest'
+  steps:
+  - task: UsePythonVersion@0
+    inputs:
+      versionSpec: '3.x'
+      addToPath: true
+
+  - script: |
+      pip install requests azure-storage-blob
+    displayName: 'Install required Python packages'
+
+  - ${{ if eq(parameters.operation, 'backup') }}:
+    - script: |
+        python pagerduty/backup-api/backup.py
+      env:
+        PAGERDUTY_API_KEY: $(pagerdutyApiKey)
+      displayName: 'Run PagerDuty Backup'
+
+    - task: AzureCLI@2
+      inputs:
+        azureSubscription: 'your-azure-service-connection'
+        scriptType: 'bash'
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+          az storage blob upload-batch --account-name $(storageAccountName) --auth-mode key -d pagerduty-backups -s $(System.DefaultWorkingDirectory) --pattern "pagerduty_backup_*.json"
+      displayName: 'Upload Backup to Azure Blob Storage'
+
+  - ${{ if eq(parameters.operation, 'restore') }}:
+    - task: AzureCLI@2
+      inputs:
+        azureSubscription: 'your-azure-service-connection'
+        scriptType: 'bash'
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+          echo "Available backup files:"
+          az storage blob list --account-name $(storageAccountName) --container-name pagerduty-backups --query "[].name" -o tsv
+          if [ -n "${{ parameters.backupFile }}" ]; then
+            az storage blob download --account-name $(storageAccountName) --container-name pagerduty-backups --name "${{ parameters.backupFile }}" --file restore_file.json
+            echo "Downloaded ${{ parameters.backupFile }} for restoration"
+          else
+            echo "No backup file selected for restoration"
+            exit 1
+          fi
+      displayName: 'List Backups and Download Selected File'
+
+    - script: |
+        python pagerduty/restore-api/restore.py
+      env:
+        PAGERDUTY_API_KEY: $(pagerdutyApiKey)
+      displayName: 'Run PagerDuty Restore'
