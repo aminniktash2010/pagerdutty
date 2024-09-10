@@ -1,0 +1,208 @@
+trigger: none
+
+parameters:
+- name: workspaceFolder
+  displayName: 'Workspace Folder'
+  type: string
+  default: 'DRE' # Example default value
+  values:
+    - DRE
+    - techops
+- name: dryRun
+  displayName: 'Dry Run'
+  type: boolean
+  default: true
+- name: destroy
+  displayName: 'Destroy Infrastructure'
+  type: boolean
+  default: false
+
+resources:
+  repositories:
+  - repository: self
+    # Assuming 'self' is your main code repository
+  - repository: SandBox-Amin-Dev-config
+    type: git
+    name: TechOps/SandBox-Amin-Dev-config
+    ref: refs/heads/pagerduty
+
+variables:
+  - name: TFVARS_DIR
+    value: ${{ parameters.workspaceFolder }}
+  - name: DRY_RUN
+    value: ${{ parameters.dryRun }}
+  - name: DESTROY
+    value: ${{ parameters.destroy }}
+
+stages:
+- stage: TerraformApply
+  jobs:
+  - job: CheckoutAndApply
+    pool:
+      vmImage: 'ubuntu-latest'
+    steps:
+    - checkout: git://SandBox-Amin@single-code # Checkout the main Terraform code
+      #path: s/
+      
+    - checkout: git://SandBox-Amin-Dev-config@pagerduty # Checkout the .tfvars files
+      #path: s/
+    
+    - script: |
+        echo "Show all the files in $(Build.SourcesDirectory)/"
+        find $(Build.SourcesDirectory)/ -type f -exec echo {} \;
+      displayName: 'List All Files'
+
+    - script: |
+        cp $(Build.SourcesDirectory)/SandBox-Amin/pd-terraform/main.tf $(Build.SourcesDirectory)/main.tf
+      displayName: 'Copy main.tf to Build.SourcesDirectory'
+
+    - script: |
+        cp $(Build.SourcesDirectory)/SandBox-Amin/pd-backup/pd-backup.py $(Build.SourcesDirectory)/pd-backup.py
+      displayName: 'Copy pd-backup to Build.SourcesDirectory'
+
+    - script: |
+        # Combine .tfvars files from the selected folder into a single terraform.tfvars
+        cat $(Build.SourcesDirectory)/SandBox-Amin-Dev-config/$(TFVARS_DIR)/*.tfvars > $(Build.SourcesDirectory)/terraform.tfvars
+        # Show the result and list all files in the 's' directory
+        echo "Combined .tfvars files into terraform.tfvars:"
+        cat $(Build.SourcesDirectory)/terraform.tfvars
+        
+        echo "Files in 's' directory:"
+        ls $(Build.SourcesDirectory)
+      displayName: 'Combine .tfvars Files'
+################################################
+    - task: AzureKeyVault@2
+      inputs:
+        azureSubscription: 'TechOps'
+        KeyVaultName: 'techopskeys'
+        SecretsFilter: 'pd-t1-key'
+        RunAsPreJob: true
+###################################################
+
+    - task: TerraformTaskV4@4
+      displayName: Terraform init
+      inputs:
+        provider: azurerm
+        command: init 
+        workingDirectory: '$(Build.SourcesDirectory)'
+        backendServiceArm: TechOps
+        backendAzureRmResourceGroupName: techops-tf-resources
+        backendAzureRmStorageAccountName: techopsstates
+        backendAzureRmContainerName: techops-tf-container
+        backendAzureRmKey: $(TFVARS_DIR)-pd
+      env:
+        TF_VAR_PD_TOKEN: $(pd-t1-key)
+        TF_VAR_TFVARS_DIR: $(TFVARS_DIR)
+
+    - task: TerraformTaskV4@4
+      displayName: Terraform Plan for Apply
+      condition: and(eq(variables['DESTROY'], 'false'), eq(variables['DRY_RUN'], 'true'))
+      inputs:
+        provider: azurerm
+        command: plan
+        workingDirectory: '$(Build.SourcesDirectory)'
+        backendServiceArm: TechOps
+        backendAzureRmResourceGroupName: techops-tf-resources
+        backendAzureRmStorageAccountName: techopsstates
+        backendAzureRmContainerName: techops-tf-container
+        backendAzureRmKey: $(TFVARS_DIR)-pd
+        environmentServiceNameAzureRM: 'TechOps'
+      env:
+        TF_VAR_PD_TOKEN: $(pd-t1-key)
+        TF_VAR_TFVARS_DIR: $(TFVARS_DIR)
+
+    - task: TerraformTaskV4@4
+      displayName: Terraform Plan for Destroy
+      condition: and(eq(variables['DESTROY'], 'true'), eq(variables['DRY_RUN'], 'true'))
+      inputs:
+        provider: azurerm
+        command: plan
+        commandOptions: -destroy
+        workingDirectory: '$(Build.SourcesDirectory)'
+        backendServiceArm: TechOps
+        backendAzureRmResourceGroupName: techops-tf-resources
+        backendAzureRmStorageAccountName: techopsstates
+        backendAzureRmContainerName: techops-tf-container
+        backendAzureRmKey: $(TFVARS_DIR)-pd
+        environmentServiceNameAzureRM: 'TechOps'
+      env:
+        TF_VAR_PD_TOKEN: $(pd-t1-key)
+        TF_VAR_TFVARS_DIR: $(TFVARS_DIR)
+
+
+    - task: UsePythonVersion@0
+      displayName: 'Backup PagerDuty Configuration'
+      condition: eq(${{ parameters.dryRun }}, false)
+      inputs:
+        versionSpec: '3.x'
+        addToPath: true
+
+    - script: |
+        pip install requests
+      displayName: 'Install required Python packages'
+
+    - script: |
+        python pd-backup.py
+      displayName: 'Run PagerDuty Backup Script'
+      env:
+        PD_TOKEN: $(pd-t1-key)
+      
+    - task: AzureCLI@2
+      displayName: 'AzCopy via Azure CLI'
+      inputs:
+        azureSubscription: 'TechOps'
+        scriptType: 'pscore'
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+          $RESOURCE_GROUP = 'techops-tf-resources'
+          $ACCOUNT = 'techopsstates'
+          $CONTAINER = 'pagerduty-backups'
+          $Date = (Get-Date).AddDays(1).ToString('yyyy-MM-dd')
+          
+          # Update storage account default action to Allow
+          az storage account update --name $ACCOUNT --resource-group $RESOURCE_GROUP --default-action Allow
+          
+          # Get storage account key
+          $key = az storage account keys list --resource-group $RESOURCE_GROUP --account-name $ACCOUNT --query [0].value -o tsv
+          
+          # Generate SAS token
+          $sas = az storage container generate-sas --name $CONTAINER --expiry $Date --permissions "racwdli" --account-name $ACCOUNT --account-key $key -o tsv
+      
+          # Copy files using azcopy
+          azcopy copy "$(System.DefaultWorkingDirectory)/pagerduty_backup_*.json" "https://$ACCOUNT.blob.core.windows.net/$CONTAINER/pd-backups?$sas" --recursive=true
+   
+    - task: TerraformTaskV4@4
+      displayName: Terraform Apply
+      condition: and(succeeded(), eq(variables['DRY_RUN'], 'false'), eq(variables['DESTROY'], 'false'))
+      inputs:
+        provider: azurerm
+        command: apply
+        workingDirectory: '$(Build.SourcesDirectory)'
+        commandOptions: -auto-approve 
+        backendServiceArm: TechOps
+        backendAzureRmResourceGroupName: techops-tf-resources
+        backendAzureRmStorageAccountName: techopsstates
+        backendAzureRmContainerName: techops-tf-container
+        backendAzureRmKey: $(TFVARS_DIR)-pd
+        environmentServiceNameAzureRM: 'TechOps'
+      env:
+        TF_VAR_PD_TOKEN: $(pd-t1-key)
+        TF_VAR_TFVARS_DIR: $(TFVARS_DIR)
+
+    - task: TerraformTaskV4@4
+      displayName: Terraform Destroy
+      condition: and(succeeded(), eq(variables['DRY_RUN'], 'false'), eq(variables['DESTROY'], 'true'))
+      inputs:
+        provider: azurerm
+        command: destroy
+        workingDirectory: '$(Build.SourcesDirectory)'
+        commandOptions: -auto-approve 
+        backendServiceArm: TechOps
+        backendAzureRmResourceGroupName: techops-tf-resources
+        backendAzureRmStorageAccountName: techopsstates
+        backendAzureRmContainerName: techops-tf-container
+        backendAzureRmKey: $(TFVARS_DIR)-pd
+        environmentServiceNameAzureRM: 'TechOps'
+      env:
+        TF_VAR_PD_TOKEN: $(pd-t1-key)
+        TF_VAR_TFVARS_DIR: $(TFVARS_DIR)
