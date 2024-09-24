@@ -35,3 +35,30 @@ variable "service_route" {
   }))
   description = "List of service routes with conditions"
 }
+variable "service_orchestrations" {
+  type = list(object({
+    service_name = string
+    rules = list(object({
+      label = string
+      condition = string
+      severity = string
+      annotate = string
+      suspend = bool
+      automation_actions = list(object({
+        name = string
+        url = string
+        auto_send = bool
+        parameters = list(object({
+          key = string
+          value = string
+        }))
+        headers = list(object({
+          key = string
+          value = string
+        }))
+      }))
+    }))
+  }))
+  description = "List of service orchestrations with rules and actions"
+}
+
