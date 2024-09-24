@@ -1,0 +1,14 @@
+{
+  "orchestrations" : [
+    {
+      "name" : "TechOps-1",
+      "team" :  "",
+      "description": ""
+    },
+    {
+      "name" : "TechOps-2",
+      "team" :  "",
+      "description": ""
+    }
+  ]
+}
