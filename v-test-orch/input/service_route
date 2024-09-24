@@ -1,0 +1,43 @@
+"service_route": [
+    {
+      "label": "t1AriaSTM-9755zg-NovaScotia Health Prod",
+      "conditions": [
+        {
+          "expression": "event.summary matches part  '.*critical.*'"
+        },
+        {
+          "expression": "event.summary matches part  '.*error.*'"
+        }
+      ]
+    },  
+    {
+      "label": "t1AriaSTM-rpydy3-NovaScotia Health TBox",
+      "conditions": [
+        {
+          "expression": "event.summary matches part  '.*critical.*'"
+        },
+        {
+          "expression": "event.summary matches part  '.*error.*'"
+        }
+      ]
+    },
+    {
+        "label": "t1CorePlatformHealth-EAU CorePlatform",
+        "conditions": [
+          {
+            "expression": "event.summary matches part  '.*critical.*'"
+          },
+          {
+            "expression": "event.summary matches part  '.*error.*'"
+          }
+        ]
+      },
+    {
+      "label": "t1SecureTunnel-rpydy3-NovaScotia Health TBox",
+      "conditions": [
+        {
+          "expression": "event.summary matches part '.*critical.*' and event.summary matches part 'region'"
+        }
+      ]
+    }
+  ]
