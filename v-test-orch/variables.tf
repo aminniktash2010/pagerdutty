@@ -26,3 +26,12 @@ variable "orchestrations" {
     description = optional(string)
   }))
 }
+variable "service_route" {
+  type = list(object({
+    label      = string
+    conditions = list(object({
+      expression = string
+    }))
+  }))
+  description = "List of service routes with conditions"
+}
