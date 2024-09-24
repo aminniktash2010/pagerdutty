@@ -60,3 +60,53 @@ resource "pagerduty_event_orchestration_router" "router" {
     }
   }
 }
+resource "pagerduty_event_orchestration_service" "service_orchestration" {
+  for_each = { for orch in var.service_orchestrations : orch.service_name => orch }
+
+  service = data.pagerduty_service.services[each.key].id
+  enable_event_orchestration_for_service = true
+
+  set {
+    id = "start"
+    dynamic "rule" {
+      for_each = each.value.rules
+      content {
+        label = rule.value.label
+        condition {
+          expression = rule.value.condition
+        }
+        actions {
+          dynamic "automation_action" {
+            for_each = rule.value.automation_actions
+            content {
+              name = automation_action.value.name
+              url = automation_action.value.url
+              auto_send = automation_action.value.auto_send
+              dynamic "parameter" {
+                for_each = automation_action.value.parameters
+                content {
+                  key = parameter.key
+                  value = tostring(parameter.value.value)
+                }
+              }
+              dynamic "header" {
+                for_each = automation_action.value.headers
+                content {
+                  key = header.key
+                  value = tostring(header.value.value)
+                }
+              }
+            }
+          }
+          severity = rule.value.severity
+          annotate = rule.value.annotate
+          suspend = rule.value.suspend ? 1 : 0
+        }
+      }
+    }
+  }
+
+  catch_all {
+    actions { }
+  }
+}
