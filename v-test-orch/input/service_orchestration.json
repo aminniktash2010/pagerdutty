@@ -1,0 +1,67 @@
+{
+    "service_orchestrations": [
+      {
+        "service_name": "t1AriaSTM-9755zg-NovaScotia Health Prod",
+        "rules": [
+          {
+            "label": "Critical Database Alert",
+            "condition": "event.summary matches part  '.*critical.*'",
+            "severity": "critical",
+            "annotate": "Critical database issue detected",
+            "suspend": false,
+            "automation_actions": [
+              {
+                "name": "Notify Slack",
+                "url": "https://slack-webhook.example.com/database",
+                "auto_send": true,
+                "parameters": [
+                  {
+                    "key": "channel",
+                    "value": "#database-alerts"
+                  }
+                ],
+                "headers": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "service_name": "t1AriaSTM-rpydy3-NovaScotia Health TBox",
+        "rules": [
+          {
+            "label": "Network Outage Alert",
+            "condition": "event.summary matches part  '.*critical.*'",
+            "severity": "critical",
+            "annotate": "Network outage detected",
+            "suspend": false,
+            "automation_actions": [
+              {
+                "name": "Notify Network Team",
+                "url": "https://slack-webhook.example.com/network",
+                "auto_send": true,
+                "parameters": [
+                  {
+                    "key": "channel",
+                    "value": "#network-alerts"
+                  }
+                ],
+                "headers": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+  
