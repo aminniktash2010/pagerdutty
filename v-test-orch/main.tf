@@ -25,28 +25,30 @@ resource "pagerduty_event_orchestration_integration" "integration" {
 }
 
 
+
+data "pagerduty_service" "services" {
+  for_each = toset([for route in var.service_route : route.label])
+  name     = each.key
+}
 resource "pagerduty_event_orchestration_router" "router" {
-  event_orchestration = lookup(local.orchestration_ids, each.value.event_orchestration, null)
+  for_each = local.orchestration_ids
+
+  event_orchestration = each.value
 
   set {
     id = "start"
-
     dynamic "rule" {
-      for_each = { for integ in var.service_route : integ.label => integ }
-
+      for_each = var.service_route
       content {
-        label = each.value.label
-
+        label = rule.value.label
         dynamic "condition" {
           for_each = rule.value.conditions
-
           content {
             expression = condition.value.expression
           }
         }
-
         actions {
-          route_to = pagerduty_service.services[rule.key].id
+          route_to = data.pagerduty_service.services[rule.value.label].id
         }
       }
     }
