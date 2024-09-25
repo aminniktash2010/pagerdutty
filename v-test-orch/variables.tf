@@ -4,6 +4,8 @@ variable "pagerduty_token" {
   sensitive  = true
 }
 
+
+
 variable "integrations" {
   description = "PagerDuty Event Orchestration Integration"
   type =  list(object({
@@ -26,6 +28,7 @@ variable "orchestrations" {
     description = optional(string)
   }))
 }
+
 variable "service_route" {
   type = list(object({
     label      = string
@@ -35,15 +38,18 @@ variable "service_route" {
   }))
   description = "List of service routes with conditions"
 }
+
 variable "service_orchestrations" {
   type = list(object({
     service_name = string
     rules = list(object({
       label = string
       condition = string
+      priority = string
       severity = string
       annotate = string
-      suspend = bool
+      suppress = bool
+      suspend  = number
       automation_actions = list(object({
         name = string
         url = string
@@ -61,4 +67,7 @@ variable "service_orchestrations" {
   }))
   description = "List of service orchestrations with rules and actions"
 }
+
+
+
 
