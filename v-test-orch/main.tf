@@ -1,3 +1,4 @@
+
 locals {
   orchestration_ids = { for k, v in pagerduty_event_orchestration.orchestration : k => v.id }
   prioritiy_ids = { for k, v  in data.pagerduty_priority.priority : k => v.id }
@@ -23,7 +24,6 @@ resource "pagerduty_event_orchestration_integration" "integration" {
   label               = each.value.label
   event_orchestration = lookup(local.orchestration_ids, each.value.event_orchestration, null)
 }
-
 
 
 data "pagerduty_service" "services" {
@@ -60,6 +60,7 @@ resource "pagerduty_event_orchestration_router" "router" {
     }
   }
 }
+
 resource "pagerduty_event_orchestration_service" "service_orchestration" {
   for_each = { for orch in var.service_orchestrations : orch.service_name => orch }
 
@@ -100,7 +101,9 @@ resource "pagerduty_event_orchestration_service" "service_orchestration" {
           }
           severity = rule.value.severity
           annotate = rule.value.annotate
-          suspend = rule.value.suspend ? 1 : 0
+          suppress = rule.value.suppress 
+          suspend  = rule.value.suspend
+          priority = data.pagerduty_priority.priority[rule.value.priority].id
         }
       }
     }
