@@ -7,8 +7,10 @@
             "label": "Critical Database Alert",
             "condition": "event.summary matches part  '.*critical.*'",
             "severity": "critical",
+            "priority": "P1",
             "annotate": "Critical database issue detected",
-            "suspend": false,
+            "suppress": false,
+            "suspend" : 500,
             "automation_actions": [
               {
                 "name": "Notify Slack",
@@ -35,11 +37,40 @@
         "service_name": "t1AriaSTM-rpydy3-NovaScotia Health TBox",
         "rules": [
           {
-            "label": "Network Outage Alert",
+            "label": "database Outage Alert",
             "condition": "event.summary matches part  '.*critical.*'",
             "severity": "critical",
+            "priority": "P3",
+            "annotate": "databaseoutage detected",
+            "suppress": true,
+            "suspend" : 0,
+            "automation_actions": [
+              {
+                "name": "Notify database Team",
+                "url": "https://slack-webhook.example.com/network",
+                "auto_send": true,
+                "parameters": [
+                  {
+                    "key": "channel",
+                    "value": "#database-alerts"
+                  }
+                ],
+                "headers": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ]
+              }
+            ]
+          },
+          {"label": "Network Outage Alert",
+            "condition": "event.summary matches part '.*critical.*' and event.summary matches part 'region'",
+            "severity": "critical",
+            "priority": "P3",
             "annotate": "Network outage detected",
-            "suspend": false,
+            "suppress": true,
+            "suspend" : 0,
             "automation_actions": [
               {
                 "name": "Notify Network Team",
@@ -60,8 +91,7 @@
               }
             ]
           }
-        ]
-      }
-    ]
-  }
-  
+       ]
+     }
+     ]
+    }
