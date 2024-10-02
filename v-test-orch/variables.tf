@@ -43,6 +43,7 @@ variable "service_route" {
 variable "service_orchestrations" {
   type = list(object({
     service_name = string
+    event_orchestration = string
     rules = list(object({
       label = string
       condition = string
