@@ -1,6 +1,8 @@
-"service_route": [
+
+    "service_route": [
     {
       "label": "t1AriaSTM-9755zg-NovaScotia Health Prod",
+      "event_orchestration" : "TechOps-4",
       "conditions": [
         {
           "expression": "event.summary matches part  '.*critical.*'"
@@ -12,6 +14,7 @@
     },  
     {
       "label": "t1AriaSTM-rpydy3-NovaScotia Health TBox",
+      "event_orchestration" : "TechOps-3",
       "conditions": [
         {
           "expression": "event.summary matches part  '.*critical.*'"
@@ -23,6 +26,7 @@
     },
     {
         "label": "t1CorePlatformHealth-EAU CorePlatform",
+        "event_orchestration" : "TechOps-3",
         "conditions": [
           {
             "expression": "event.summary matches part  '.*critical.*'"
@@ -34,6 +38,7 @@
       },
     {
       "label": "t1SecureTunnel-rpydy3-NovaScotia Health TBox",
+      "event_orchestration" : "TechOps-3",
       "conditions": [
         {
           "expression": "event.summary matches part '.*critical.*' and event.summary matches part 'region'"
@@ -41,3 +46,4 @@
       ]
     }
   ]
+}
