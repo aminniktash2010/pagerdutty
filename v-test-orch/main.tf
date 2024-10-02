@@ -38,7 +38,10 @@ resource "pagerduty_event_orchestration_router" "router" {
   set {
     id = "start"
     dynamic "rule" {
-      for_each = var.service_route
+      for_each = {
+        for route in var.service_route :
+        route.label => route if route.event_orchestration == each.key
+      }
       content {
         label = rule.value.label
         dynamic "condition" {
@@ -60,11 +63,15 @@ resource "pagerduty_event_orchestration_router" "router" {
     }
   }
 }
-
 resource "pagerduty_event_orchestration_service" "service_orchestration" {
-  for_each = { for orch in var.service_orchestrations : orch.service_name => orch }
 
-  service = data.pagerduty_service.services[each.key].id
+  for_each = {
+    for orch in var.service_orchestrations :
+    "${orch.event_orchestration}-${orch.service_name}" => orch
+  }
+
+
+  service = data.pagerduty_service.services[each.value.service_name].id
   enable_event_orchestration_for_service = true
 
   set {
