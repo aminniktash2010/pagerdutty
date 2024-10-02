@@ -32,6 +32,7 @@ variable "orchestrations" {
 variable "service_route" {
   type = list(object({
     label      = string
+    event_orchestration = string
     conditions = list(object({
       expression = string
     }))
