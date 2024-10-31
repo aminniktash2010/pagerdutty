@@ -1,5 +1,18 @@
 #!/usr/bin/env python
+###############################
+#Example:
+#python3 your script file.py \
+#--api-key your PD key \
+#--requester ami@your email.com \
+#--service <Your service name> \
+#--date 2024-11-02T04:00:00-0700 \
+#--description "Scheduled weekly maintenance" \
+#--duration 200 \#<Minutes>
+#--period 168 \
+#--number 1
 
+
+##############################
 # Python script to create recurring maintenance windows in PagerDuty with recursive dependency fetching
 
 import argparse
