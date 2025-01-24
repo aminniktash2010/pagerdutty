@@ -1,0 +1,39 @@
+trigger:
+  - none # Or your desired branch trigger
+
+pool:
+  vmImage: ubuntu-latest
+
+parameters:
+  - name: statusPageName
+    displayName: Status Page Name
+    type: string
+  - name: businessServiceIds
+    displayName: Business Service IDs (comma-separated)
+    type: string
+    default: '' # Optional default value
+
+
+steps:
+  - task: UsePythonVersion@0
+    inputs:
+      versionSpec: '3.x'
+    displayName: 'Use Python 3.x'
+
+  - task: Bash@3
+    inputs:
+      targetType: 'inline'
+      script: |
+        pip install requests
+    displayName: 'Install Python Packages'
+
+  - task: Bash@3
+    inputs:
+      targetType: 'inline'
+      script: |
+        python create_pagerduty_status_page.py
+    displayName: 'Create Status Page'
+    env:
+      PAGERDUTY_API_KEY: $(pagerduty_api_key)
+      STATUS_PAGE_NAME: ${{ parameters.statusPageName }}
+      BUSINESS_SERVICE_IDS: ${{ parameters.businessServiceIds }}
