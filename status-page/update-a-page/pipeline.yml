@@ -1,0 +1,43 @@
+name: Update PagerDuty Status Page
+
+on:
+  workflow_dispatch: # Allows manual triggering from the GitHub Actions UI
+  # Alternatively, you could trigger on push to a specific branch:
+  # push:
+  #   branches:
+  #     - main
+
+jobs:
+  update_status_page:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install requirements
+        run: pip install -r requirements.txt
+      
+      - name: Copy env file
+        run: cp .env.example .env
+      
+      - name: Update Status Page
+        env:
+          PAGERDUTY_API_TOKEN: ${{ secrets.PAGERDUTY_API_TOKEN }}
+          STATUS_PAGE_ID: ${{ github.event.inputs.status_page_id }}
+          SOURCE_GROUP_NAME: ${{ github.event.inputs.source_group_name }}
+          DEST_GROUP_NAME: ${{ github.event.inputs.dest_group_name }}
+          BUSINESS_SERVICE_NAME: ${{ github.event.inputs.business_service_name }}
+        run: python update_status_page.py
+        
+      - name: Success
+        if: success()
+        run: echo "Successfully updated status page"
+      
+      - name: Failure
+        if: failure()
+        run: echo "Failed to update status page"
