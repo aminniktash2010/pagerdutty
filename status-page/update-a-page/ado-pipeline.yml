@@ -1,0 +1,64 @@
+trigger:
+  - main # or the branch you want to trigger on
+
+pool:
+  vmImage: ubuntu-latest
+
+parameters:
+  - name: status_page_id
+    type: string
+    displayName: Status Page ID
+  - name: source_group_name
+    type: string
+    displayName: Source Group Name
+  - name: dest_group_name
+    type: string
+    displayName: Destination Group Name
+  - name: business_service_name
+    type: string
+    displayName: Business Service Name
+
+steps:
+  - task: PythonVersion@0
+    inputs:
+      versionSpec: '3.10'
+      
+  - task: UsePythonVersion@0
+    inputs:
+      versionSpec: '3.10'
+
+  - task: CmdLine@2
+    displayName: 'Install dependencies'
+    inputs:
+        script: 'pip install -r requirements.txt'
+
+  - task: CmdLine@2
+    displayName: Copy .env file
+    inputs:
+        script: cp .env.example .env
+
+  - task: PythonScript@0
+    displayName: 'Update Status Page'
+    inputs:
+      scriptSource: 'filePath'
+      scriptPath: 'update_status_page.py'
+    env:
+        PAGERDUTY_API_TOKEN: $(pagerduty_api_token)  # Assuming you have a variable group set
+        STATUS_PAGE_ID: ${{ parameters.status_page_id }}
+        SOURCE_GROUP_NAME: ${{ parameters.source_group_name }}
+        DEST_GROUP_NAME: ${{ parameters.dest_group_name }}
+        BUSINESS_SERVICE_NAME: ${{ parameters.business_service_name }}
+
+  - task: PowerShell@2
+    displayName: 'Success Message'
+    condition: succeeded()
+    inputs:
+      targetType: 'inline'
+      script: 'Write-Host "Successfully updated status page"'
+
+  - task: PowerShell@2
+    displayName: 'Failure Message'
+    condition: failed()
+    inputs:
+      targetType: 'inline'
+      script: 'Write-Host "Failed to update status page"'
