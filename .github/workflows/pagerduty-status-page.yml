@@ -29,6 +29,6 @@ jobs:
       - name: Create Status Page
         run: python create_pagerduty_status_page.py
         env:
-          PAGERDUTY_API_KEY: ${{ secrets.PAGERDUTY_API_KEY }}
+          PAGERDUTY_API_KEY: "u+sqXg7x4x_Sy3vgCJZw"
           STATUS_PAGE_NAME: ${{ github.event.inputs.statusPageName }}
           BUSINESS_SERVICE_IDS: ${{ github.event.inputs.businessServiceIds }}
