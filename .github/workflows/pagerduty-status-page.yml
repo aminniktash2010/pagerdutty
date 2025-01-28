@@ -1,0 +1,34 @@
+name: Create PagerDuty Status Page
+
+on:
+  workflow_dispatch:
+    inputs:
+      statusPageName:
+        description: 'Status Page Name'
+        required: true
+      businessServiceIds:
+        description: 'Business Service IDs (JSON Array)'
+        required: false
+        default: '[]'
+
+jobs:
+  create_status_page:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+
+      - name: Install dependencies
+        run: pip install requests
+
+      - name: Create Status Page
+        run: python create_pagerduty_status_page.py
+        env:
+          PAGERDUTY_API_KEY: ${{ secrets.PAGERDUTY_API_KEY }}
+          STATUS_PAGE_NAME: ${{ github.event.inputs.statusPageName }}
+          BUSINESS_SERVICE_IDS: ${{ github.event.inputs.businessServiceIds }}
